@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 ###################################################################
-###   @FilePath: \Nerfusion-EG3D\gen_features.py
+###   @FilePath: /Nerfusion-EG3D/gen_features.py
 ###   @Author: AceSix
 ###   @Date: 2022-11-13 12:36:11
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-11-13 13:45:29
+###   @LastEditTime: 2022-11-28 18:55:37
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -77,7 +77,7 @@ def generate_features(
     features = []
     for i in range(batch_size):
         ws = G.mapping(zs[i:i+1], conditioning_params, truncation_psi=truncation_psi, truncation_cutoff=truncation_cutoff)
-        features.append(G.gen_planes(ws)) 
+        features.append(G.gen_planes(ws))
     features = torch.cat(features, 0)
     return features
 
@@ -86,6 +86,9 @@ def generate_features(
 #----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    generate_features("afhqcats512-128.pkl", 0, 5, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
+    with torch.no_grad():
+        features = generate_features("afhqcats512-128.pkl", 0, 32, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
+        torch.save(features, "gen_features.pth")
+
 
 #----------------------------------------------------------------------------

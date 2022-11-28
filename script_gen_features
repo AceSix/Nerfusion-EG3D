@@ -1,0 +1,19 @@
+###
+ # @FilePath: \undefined\\files.brown.edu\cs-home\zliu177\Desktop\GEDI\script_extract_field
+ # @Author: AceSix
+ # @Date: 1969-12-31 19:00:00
+ # @LastEditors: AceSix
+ # @LastEditTime: 2022-11-19 11:28:16
+ # Copyright (C) 2022 Brown U. All rights reserved.
+### 
+#!/bin/sh
+#
+#$ -cwd
+#
+#$ -l inf 
+#
+#$ -l vf=16G
+#
+#$ -l gpus=1
+#
+python gen_features.py
