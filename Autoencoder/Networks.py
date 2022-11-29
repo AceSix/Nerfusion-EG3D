@@ -81,28 +81,46 @@ class DecoderStage(nn.Module):
         
         return x
     
+class Encoder(nn.Module):
+    def __init__(self, InputChannels, OutputChannels, StageWidths=[192, 384, 768], BlocksPerStage=[2, 2, 2], CompressionFactor=4, ReceptiveField=3, ResamplingFilter=[1, 2, 1]):
+        super(Encoder, self).__init__()
+        
+        MainLayers = [EncoderStage(StageWidths[x], StageWidths[x + 1], BlocksPerStage[x], CompressionFactor, ReceptiveField, ResamplingFilter) for x in range(len(StageWidths) - 1)]
+        MainLayers += [EncoderStage(StageWidths[-1], OutputChannels, BlocksPerStage[-1], CompressionFactor, ReceptiveField)]
+        
+        self.Head = ChannelMixer(InputChannels, StageWidths[0])
+        self.MainLayers = nn.ModuleList(MainLayers)
+        
+    def forward(self, x):
+        x = self.Head(x)
+        
+        for Layer in self.MainLayers:
+            x = Layer(x)
+            
+        return x
     
+class Decoder(nn.Module):
+    def __init__(self, InputChannels, OutputChannels, StageWidths=[768, 384, 192], BlocksPerStage=[2, 2, 2], CompressionFactor=4, ReceptiveField=3, ResamplingFilter=[1, 2, 1]):
+        super(Decoder, self).__init__()
+        
+        MainLayers = [DecoderStage(InputChannels, StageWidths[0], BlocksPerStage[0], CompressionFactor, ReceptiveField)]
+        MainLayers += [DecoderStage(StageWidths[x], StageWidths[x + 1], BlocksPerStage[x + 1], CompressionFactor, ReceptiveField, ResamplingFilter) for x in range(len(StageWidths) - 1)]
+        
+        self.MainLayers = nn.ModuleList(MainLayers)
+        self.Tail = ChannelMixer(StageWidths[-1], OutputChannels)
+        
+    def forward(self, x):
+        for Layer in self.MainLayers:
+            x = Layer(x)
+            
+        return self.Tail(x)
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-# import torch
-
-# ResamplingFilter = [1, 2, 1]
-
-# x = torch.zeros(1, 32, 128, 128)
-# m = EncoderStage(32, 64, 2, 4, 3, ResamplingFilter)
-# n = DecoderStage(32, 16, 2, 4, 3, ResamplingFilter)
-
-# print(m(x).shape)
-# print(n(x).shape)
+class Autoencoder(nn.Module):
+    def __init__(self, InputChannels, BottleneckChannels, StageWidths=[192, 384, 768], BlocksPerStage=[2, 2, 2], CompressionFactor=4, ReceptiveField=3, ResamplingFilter=[1, 2, 1]):
+        super(Autoencoder, self).__init__()
+        
+        self.EncoderLayer = Encoder(InputChannels, BottleneckChannels, StageWidths, BlocksPerStage, CompressionFactor, ReceptiveField, ResamplingFilter)
+        self.DecoderLayer = Decoder(BottleneckChannels, InputChannels, [*reversed(StageWidths)], [*reversed(BlocksPerStage)], CompressionFactor, ReceptiveField, ResamplingFilter)
+        
+    def forward(self, x):
+        return self.DecoderLayer(self.EncoderLayer(x))
