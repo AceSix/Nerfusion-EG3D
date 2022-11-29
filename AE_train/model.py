@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 ###################################################################
-###   @FilePath: \Nerfusion-EG3D\AE_train\model.py
+###   @FilePath: /Nerfusion-EG3D/AE_train/model.py
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-11-29 17:04:18
+###   @LastEditTime: 2022-11-29 17:15:19
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # -*- coding:utf-8 -*-
@@ -105,8 +105,8 @@ class AE_triplane(nn.Module):
         self.rb1 = GenResBlock(256, 256, activation=act_dict[activation][0])
         self.rb2 = GenResBlock(256, 256, activation=act_dict[activation][0])
         self.rb3 = GenResBlock(256, 256, activation=act_dict[activation][0])
-        # self.rb4 = GenResBlock(256, 256, activation=act_dict[activation][0])
-        # self.rb5 = GenResBlock(256, 256, activation=act_dict[activation][0])
+        self.rb4 = GenResBlock(256, 256, activation=act_dict[activation][0])
+        self.rb5 = GenResBlock(256, 256, activation=act_dict[activation][0])
         self.dc1 = DeCov(256, 192, 2, activation=act_dict[activation][1])
         self.dc2 = DeCov(192, 128, 2, activation=act_dict[activation][1])
         self.dc3 = DeCov(128, 96, 2, activation=act_dict[activation][1])
@@ -119,8 +119,8 @@ class AE_triplane(nn.Module):
         h = self.rb1(h)
         h = self.rb2(h)
         h = self.rb3(h)
-        # h = self.rb4(h)
-        # h = self.rb5(h)
+        h = self.rb4(h)
+        h = self.rb5(h)
         h = self.dc1(h)
         h = self.dc2(h)
         h = self.dc3(h)

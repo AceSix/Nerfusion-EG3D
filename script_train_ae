@@ -3,7 +3,7 @@
  # @Author: AceSix
  # @Date: 1969-12-31 19:00:00
  # @LastEditors: AceSix
- # @LastEditTime: 2022-11-29 16:44:08
+ # @LastEditTime: 2022-11-29 17:15:40
  # Copyright (C) 2022 Brown U. All rights reserved.
 ### 
 #!/bin/sh
@@ -17,4 +17,4 @@
 #$ -l gpus=1
 #
 nvidia-smi
-/home/zliu177/anaconda3/envs/shred/bin/python gen_fearecon.py
+/home/zliu177/anaconda3/envs/shred/bin/python ae_train.py --model "convnext" --version "convnext"
