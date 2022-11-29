@@ -12,8 +12,9 @@
 #
 #$ -l inf 
 #
-#$ -l vf=16G
+#$ -l vf=8G
 #
 #$ -l gpus=1
 #
-python3 gen_features.py
+nvidia-smi
+python3 ae_train.py

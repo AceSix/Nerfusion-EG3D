@@ -10,10 +10,10 @@
 #
 #$ -cwd
 #
-#$ -l inf 
+#$ -l hour 
 #
-#$ -l vf=16G
+#$ -l vf=4G
 #
 #$ -l gpus=1
 #
-python3 gen_features.py
+nvidia-smi

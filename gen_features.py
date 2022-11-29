@@ -4,7 +4,7 @@
 ###   @Author: AceSix
 ###   @Date: 2022-11-13 12:36:11
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-11-28 18:55:37
+###   @LastEditTime: 2022-11-28 19:31:26
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -88,7 +88,7 @@ def generate_features(
 if __name__ == "__main__":
     with torch.no_grad():
         features = generate_features("afhqcats512-128.pkl", 0, 32, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
-        torch.save(features, "gen_features.pth")
+        torch.save(features, "features.pth")
 
 
 #----------------------------------------------------------------------------
