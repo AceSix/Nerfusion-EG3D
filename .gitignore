@@ -3,3 +3,4 @@
 script_gen_features.*
 script_train_ae.*
 script_view_usage.*
+logs
