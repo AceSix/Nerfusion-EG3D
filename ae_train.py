@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 ###################################################################
-###   @FilePath: /Nerfusion-EG3D/ae_train.py
+###   @FilePath: \Nerfusion-EG3D\ae_train.py
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-11-28 20:10:57
+###   @LastEditTime: 2022-11-29 17:09:57
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 
@@ -14,6 +14,7 @@ import  argparse
 from torchvision.utils import save_image
 
 from AE_train.model import AE_triplane
+from Autoencoder.Networks import Autoencoder
 from AE_train.triplane_dataset import TriplainDataset
 from AE_train.utils import PSNR
 
@@ -34,7 +35,10 @@ class Trainer(object):
             os.mkdir(self.model_state_dir)
             os.mkdir(self.image_dir)
 
-        self.model = AE_triplane().cuda()
+        if config.model=="convnext":
+            self.model = Autoencoder(96, 384, [192, 256, 384]).cuda()
+        else:
+            self.model = AE_triplane().cuda()
 
         self.config = config
 
@@ -76,6 +80,7 @@ def getParameters():
 
     parser.add_argument('--train_data_dir', type=str, default="./features.pth")
     parser.add_argument('--version', type=str, default="simple AE")
+    parser.add_argument('--model', type=str, default="simple")
 
     # AE training setting
     parser.add_argument('--iter_size', type=int, default=200000)

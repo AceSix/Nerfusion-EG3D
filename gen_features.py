@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 ###################################################################
-###   @FilePath: /Nerfusion-EG3D/gen_features.py
+###   @FilePath: \Nerfusion-EG3D\gen_features.py
 ###   @Author: AceSix
 ###   @Date: 2022-11-13 12:36:11
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-11-28 19:31:26
+###   @LastEditTime: 2022-11-29 16:59:01
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -88,6 +88,9 @@ def generate_features(
 if __name__ == "__main__":
     with torch.no_grad():
         features = generate_features("afhqcats512-128.pkl", 0, 32, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
+        print(features.mean())
+        print(features.min())
+        print(features.max())
         torch.save(features, "features.pth")
 
 

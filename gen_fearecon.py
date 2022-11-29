@@ -164,10 +164,11 @@ def generate_images(
         camera_params = torch.cat([cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
         conditioning_params = torch.cat([conditioning_cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
 
-        ws = G.mapping(z, conditioning_params, truncation_psi=14, truncation_cutoff=18.837)
+        ws = G.mapping(z, conditioning_params, truncation_psi=1, truncation_cutoff=14)
         triplanes = G.gen_planes(ws)
         with torch.no_grad():
-            recon_planes = AE(triplanes)
+            recon_planes = AE(triplanes.view(len(triplanes), 96, triplanes.shape[-2], triplanes.shape[-1]))
+            recon_planes.view(len(recon_planes), 3, 32, recon_planes.shape[-2], recon_planes.shape[-1])
         img = G.synthesis(triplanes, camera_params)['image_raw']
         recon_img = G.synthesis(recon_planes, camera_params)['image_raw']
 
