@@ -26,6 +26,7 @@ from camera_utils import LookAtPoseSampler, FOV_to_intrinsics
 from torch_utils import misc
 from training.triplane import TriPlaneFeatureGenerator
 from AE_train.model import AE_triplane
+from Autoencoder.Networks import Autoencoder
 
 
 #----------------------------------------------------------------------------
@@ -143,7 +144,11 @@ def generate_images(
     G_new.rendering_kwargs = G.rendering_kwargs
     G = G_new
 
-    AE = AE_triplane().to(device)
+    # AE = AE_triplane().to(device)
+    if "convnext" in AE_pkl:
+        AE = Autoencoder(96, 384, [192, 256, 384]).to(device)
+    else:
+        AE = AE_triplane().to(device)
     AE.load_state_dict(torch.load(AE_pkl))
     AE.eval()
 
@@ -152,41 +157,51 @@ def generate_images(
     cam2world_pose = LookAtPoseSampler.sample(3.14/2, 3.14/2, torch.tensor([0, 0, 0.2], device=device), radius=2.7, device=device)
     intrinsics = FOV_to_intrinsics(fov_deg, device=device)
 
-    z = torch.from_numpy(np.random.randn(1, G.z_dim)).to(device)
+    
+    np.random.RandomState(0)
+    # z1 = torch.from_numpy(np.random.randn(2, G.z_dim))
+    # torch.save(z1, 'fix_noise.pkl')
+    # z1 = z1.to(device)
+    z1 = torch.load('fix_noise.pkl').to(device)
 
-    imgs, recons = [], []
     angle_p = -0.2
-    for angle_y, angle_p in [(.4, angle_p), (0, angle_p), (-.4, angle_p)]:
-        cam_pivot = torch.tensor(G.rendering_kwargs.get('avg_camera_pivot', [0, 0, 0]), device=device)
-        cam_radius = G.rendering_kwargs.get('avg_camera_radius', 2.7)
-        cam2world_pose = LookAtPoseSampler.sample(np.pi/2 + angle_y, np.pi/2 + angle_p, cam_pivot, radius=cam_radius, device=device)
-        conditioning_cam2world_pose = LookAtPoseSampler.sample(np.pi/2, np.pi/2, cam_pivot, radius=cam_radius, device=device)
-        camera_params = torch.cat([cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
-        conditioning_params = torch.cat([conditioning_cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
 
-        ws = G.mapping(z, conditioning_params, truncation_psi=1, truncation_cutoff=14)
-        triplanes = G.gen_planes(ws)
-        with torch.no_grad():
-            recon_planes = AE(triplanes.view(len(triplanes), 96, triplanes.shape[-2], triplanes.shape[-1]))
-            recon_planes.view(len(recon_planes), 3, 32, recon_planes.shape[-2], recon_planes.shape[-1])
-        img = G.synthesis(triplanes, camera_params)['image_raw']
-        recon_img = G.synthesis(recon_planes, camera_params)['image_raw']
+    for z, tag in [(z1[0:1], 'train'), (z1[1:2], 'test')]:
+        imgs, recons = [], []
+        for angle_y, angle_p in [(.4, angle_p), (0, angle_p), (-.4, angle_p)]:
+            cam_pivot = torch.tensor(G.rendering_kwargs.get('avg_camera_pivot', [0, 0, 0]), device=device)
+            cam_radius = G.rendering_kwargs.get('avg_camera_radius', 2.7)
+            cam2world_pose = LookAtPoseSampler.sample(np.pi/2 + angle_y, np.pi/2 + angle_p, cam_pivot, radius=cam_radius, device=device)
+            conditioning_cam2world_pose = LookAtPoseSampler.sample(np.pi/2, np.pi/2, cam_pivot, radius=cam_radius, device=device)
+            camera_params = torch.cat([cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
+            conditioning_params = torch.cat([conditioning_cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
 
-        img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
-        recon_img = (recon_img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
-        imgs.append(img)
-        recons.append(recon_img)
+            ws = G.mapping(z, conditioning_params, truncation_psi=1, truncation_cutoff=14)
+            triplanes = G.gen_planes(ws)
+            with torch.no_grad():
+                recon_planes = AE(triplanes.view(len(triplanes), 96, triplanes.shape[-2], triplanes.shape[-1]))
+                recon_planes.view(len(recon_planes), 3, 32, recon_planes.shape[-2], recon_planes.shape[-1])
+            img = G.synthesis(triplanes, camera_params, ws)['sr']
+            recon_img = G.synthesis(recon_planes, camera_params, ws)['sr']
 
-    img = torch.cat(imgs, dim=2)
-    recon = torch.cat(recons, dim=2)
-    output = torch.cat([img, recon], dim=1)
+            img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+            recon_img = (recon_img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+            imgs.append(img)
+            recons.append(recon_img)
 
-    PIL.Image.fromarray(output[0].cpu().numpy(), 'RGB').save(f'{outdir}/{os.path.basename(AE_pkl)}.png')
+        img = torch.cat(imgs, dim=2)
+        recon = torch.cat(recons, dim=2)
+
+        PIL.Image.fromarray(img[0].cpu().numpy(), 'RGB').save(f'{outdir}/{os.path.basename(AE_pkl)}_direc_{tag}.png')
+        PIL.Image.fromarray(recon[0].cpu().numpy(), 'RGB').save(f'{outdir}/{os.path.basename(AE_pkl)}_recon_{tag}.png')
 
 
 #----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    generate_images("afhqcats512-128.pkl", "./logs/simple AE/model_state/200000_iter.pth", "./logs/simple AE/image", 18.837) # pylint: disable=no-value-for-parameter
+    generate_images("afhqcats512-128.pkl", "./logs/convnext/model_state/130000_iter.pth", "./logs/convnext/image", 18.837) # pylint: disable=no-value-for-parameter
+    # generate_images("afhqcats512-128.pkl", "./logs/convnext/model_state/80000_iter.pth", "./logs/convnext/image", 18.837) # pylint: disable=no-value-for-parameter
+    # generate_images("afhqcats512-128.pkl", "./logs/convnext/model_state/30000_iter.pth", "./logs/convnext/image", 18.837) # pylint: disable=no-value-for-parameter
+    # generate_images("afhqcats512-128.pkl", "./logs/simple384/model_state/180000_iter.pth", "./logs/simple384/image", 18.837) # pylint: disable=no-value-for-parameter
 
 #----------------------------------------------------------------------------
