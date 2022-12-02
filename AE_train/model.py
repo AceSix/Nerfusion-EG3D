@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 ###################################################################
-###   @FilePath: /Nerfusion-EG3D/AE_train/model.py
+###   @FilePath: \Nerfusion-EG3D\AE_train\model.py
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-11-29 17:15:19
+###   @LastEditTime: 2022-11-29 21:15:29
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # -*- coding:utf-8 -*-
@@ -100,17 +100,17 @@ class AE_triplane(nn.Module):
         super().__init__()
 
         self.ec1 = Cov(96, 128, activation=act_dict[activation][1])
-        self.ec2 = Cov(128, 192, activation=act_dict[activation][1])
-        self.ec3 = Cov(192, 256, activation=act_dict[activation][1])
-        self.rb1 = GenResBlock(256, 256, activation=act_dict[activation][0])
-        self.rb2 = GenResBlock(256, 256, activation=act_dict[activation][0])
-        self.rb3 = GenResBlock(256, 256, activation=act_dict[activation][0])
-        self.rb4 = GenResBlock(256, 256, activation=act_dict[activation][0])
-        self.rb5 = GenResBlock(256, 256, activation=act_dict[activation][0])
-        self.dc1 = DeCov(256, 192, 2, activation=act_dict[activation][1])
-        self.dc2 = DeCov(192, 128, 2, activation=act_dict[activation][1])
+        self.ec2 = Cov(128, 256, activation=act_dict[activation][1])
+        self.ec3 = Cov(256, 384, activation=act_dict[activation][1])
+        self.rb1 = GenResBlock(384, 384, activation=act_dict[activation][0])
+        self.rb2 = GenResBlock(384, 384, activation=act_dict[activation][0])
+        self.rb3 = GenResBlock(384, 384, activation=act_dict[activation][0])
+        self.rb4 = GenResBlock(384, 384, activation=act_dict[activation][0])
+        self.rb5 = GenResBlock(384, 384, activation=act_dict[activation][0])
+        self.dc1 = DeCov(384, 256, 2, activation=act_dict[activation][1])
+        self.dc2 = DeCov(256, 128, 2, activation=act_dict[activation][1])
         self.dc3 = DeCov(128, 96, 2, activation=act_dict[activation][1])
-        self.cout = nn.Conv2d(96, 96, (1, 1), 1, bias=False)
+        self.cout = nn.Conv2d(96, 96, (1, 1), 1, bias=True)
 
     def forward(self, features):
         h = self.ec1(features)

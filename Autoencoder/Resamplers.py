@@ -116,7 +116,7 @@ class InplaceDownsamplerCUDA(nn.Module):
 
         return nn.functional.pixel_unshuffle(y, 2)
 
-InterpolativeUpsampler = InterpolativeUpsamplerCUDA
-InterpolativeDownsampler = InterpolativeDownsamplerCUDA
-InplaceUpsampler = InplaceUpsamplerCUDA
-InplaceDownsampler = InplaceDownsamplerCUDA
+InterpolativeUpsampler = InterpolativeUpsamplerReference
+InterpolativeDownsampler = InterpolativeDownsamplerReference
+InplaceUpsampler = InplaceUpsamplerReference
+InplaceDownsampler = InplaceDownsamplerReference

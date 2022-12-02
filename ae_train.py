@@ -4,7 +4,7 @@
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-11-29 17:09:57
+###   @LastEditTime: 2022-11-30 13:57:08
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 
@@ -37,6 +37,10 @@ class Trainer(object):
 
         if config.model=="convnext":
             self.model = Autoencoder(96, 384, [192, 256, 384]).cuda()
+        if config.model=="convnext8x":
+            self.model = Autoencoder(96, 384, [192, 256, 384, 384], [2, 2, 2, 2]).cuda()
+        if config.model=="convnext4c":
+            self.model = Autoencoder(96, 96, [192, 384, 512]).cuda()
         else:
             self.model = AE_triplane().cuda()
 

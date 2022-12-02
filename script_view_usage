@@ -13,6 +13,7 @@
 #$ -l hour 
 #
 #$ -l vf=4G
+#$ -l gmem=48
 #
 #$ -l gpus=1
 #

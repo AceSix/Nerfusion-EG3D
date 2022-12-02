@@ -1,3 +1,12 @@
+# -*- coding:utf-8 -*-
+###################################################################
+###   @FilePath: /Nerfusion-EG3D/Autoencoder/FusedOperators.py
+###   @Author: AceSix
+###   @Date: 1969-12-31 19:00:00
+###   @LastEditors: AceSix
+###   @LastEditTime: 2022-11-29 17:25:35
+###   @Copyright (C) 2022 Brown U. All rights reserved.
+###################################################################
 import torch
 import torch.nn as nn
 import math
@@ -30,4 +39,4 @@ class BiasedActivationCUDA(nn.Module):
     def forward(self, x):
         return bias_act.bias_act(x, self.Bias, act=BiasedActivationCUDA.Function, gain=1)
 
-BiasedActivation = BiasedActivationCUDA
+BiasedActivation = BiasedActivationReference
