@@ -147,24 +147,29 @@ def generate_images(
     cam2world_pose = LookAtPoseSampler.sample(3.14/2, 3.14/2, torch.tensor([0, 0, 0.2], device=device), radius=2.7, device=device)
     intrinsics = FOV_to_intrinsics(fov_deg, device=device)
 
+    features = torch.load(plane_pkl).to(device)
+    imgs = [[],[],[],[]]
+    for i in range(32):
+        angle_p = -0.2
+        for angle_y, angle_p in [(.4, angle_p)]:
+            cam_pivot = torch.tensor(G.rendering_kwargs.get('avg_camera_pivot', [0, 0, 0]), device=device)
+            cam_radius = G.rendering_kwargs.get('avg_camera_radius', 2.7)
+            cam2world_pose = LookAtPoseSampler.sample(np.pi/2 + angle_y, np.pi/2 + angle_p, cam_pivot, radius=cam_radius, device=device)
+            conditioning_cam2world_pose = LookAtPoseSampler.sample(np.pi/2, np.pi/2, cam_pivot, radius=cam_radius, device=device)
+            camera_params = torch.cat([cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
+            conditioning_params = torch.cat([conditioning_cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
 
-    imgs = []
-    angle_p = -0.2
-    for angle_y, angle_p in [(.4, angle_p), (0, angle_p), (-.4, angle_p)]:
-        cam_pivot = torch.tensor(G.rendering_kwargs.get('avg_camera_pivot', [0, 0, 0]), device=device)
-        cam_radius = G.rendering_kwargs.get('avg_camera_radius', 2.7)
-        cam2world_pose = LookAtPoseSampler.sample(np.pi/2 + angle_y, np.pi/2 + angle_p, cam_pivot, radius=cam_radius, device=device)
-        conditioning_cam2world_pose = LookAtPoseSampler.sample(np.pi/2, np.pi/2, cam_pivot, radius=cam_radius, device=device)
-        camera_params = torch.cat([cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
-        conditioning_params = torch.cat([conditioning_cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
+            triplanes = features[i:i+1]
+            img = G.synthesis(triplanes, camera_params)['image_raw']
 
-        triplanes = torch.load(plane_pkl)[0:1]
-        img = G.synthesis(triplanes, camera_params)['image_raw']
+            img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+            imgs[i%4].append(img)
 
-        img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
-        imgs.append(img)
-
-    img = torch.cat(imgs, dim=2)
+    hor = []
+    for iset in imgs:
+        hor.append(torch.cat(iset, dim=2))
+    
+    img = torch.cat(hor, dim=1)
 
     PIL.Image.fromarray(img[0].cpu().numpy(), 'RGB').save(f'{outdir}/{os.path.basename(plane_pkl)}.png')
 
@@ -172,6 +177,6 @@ def generate_images(
 #----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    generate_images("afhqcats512-128.pkl", "./logs/simple AE/image/iter-200000.pth", "./logs/simple AE/image", 18.837) # pylint: disable=no-value-for-parameter
+    generate_images("afhqcats512-128.pkl", "./features.pth", "./", 18.837) # pylint: disable=no-value-for-parameter
 
 #----------------------------------------------------------------------------
