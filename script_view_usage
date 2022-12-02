@@ -6,15 +6,12 @@
  # @LastEditTime: 2022-11-19 11:28:16
  # Copyright (C) 2022 Brown U. All rights reserved.
 ### 
-#!/bin/sh
-#
 #$ -cwd
 #
-#$ -l hour 
+#$ -l long 
 #
-#$ -l vf=4G
-#$ -l gmem=48
-#
-#$ -l gpus=1
+#$ -l vf=8G
+#$ -l gmem=48G
+#$ -l gpus=2
 #
 nvidia-smi

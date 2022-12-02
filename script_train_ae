@@ -1,20 +1,21 @@
 ###
- # @FilePath: \Nerfusion-EG3D\script_train_ae
+ # @FilePath: /Nerfusion-EG3D/script_train_ae
  # @Author: AceSix
  # @Date: 1969-12-31 19:00:00
  # @LastEditors: AceSix
- # @LastEditTime: 2022-11-29 21:16:53
+ # @LastEditTime: 2022-12-02 16:34:59
  # Copyright (C) 2022 Brown U. All rights reserved.
 ### 
 #!/bin/sh
 #
 #$ -cwd
 #
-#$ -l inf 
+#$ -l long 
 #
 #$ -l vf=8G
-#
+#$ -l gmem=48G
 #$ -l gpus=1
 #
 nvidia-smi
-/home/zliu177/anaconda3/envs/shred/bin/python ae_train.py --model "convnext4c" --version "convnext4c" --iter_size 200000 --batch_size 8
+/home/zliu177/anaconda3/envs/shred/bin/python ae_train.py --model "convnext8c4b" --version "convnext8c4b" --iter_size 120000 --batch_size 16
+/home/zliu177/anaconda3/envs/shred/bin/python ae_train.py --model "convnext12c4b" --version "convnext12c4b" --iter_size 120000 --batch_size 16
