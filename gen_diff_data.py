@@ -1,10 +1,19 @@
 # -*- coding:utf-8 -*-
 ###################################################################
+###   @FilePath: /Nerfusion-EG3D/gen_diff_data.py
+###   @Author: AceSix
+###   @Date: 1969-12-31 19:00:00
+###   @LastEditors: AceSix
+###   @LastEditTime: 2022-12-07 13:59:05
+###   @Copyright (C) 2022 Brown U. All rights reserved.
+###################################################################
+# -*- coding:utf-8 -*-
+###################################################################
 ###   @FilePath: /Nerfusion-EG3D/gen_features.py
 ###   @Author: AceSix
 ###   @Date: 2022-11-13 12:36:11
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-12-07 14:01:40
+###   @LastEditTime: 2022-12-05 13:34:01
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -36,6 +45,7 @@ import legacy
 from camera_utils import LookAtPoseSampler, FOV_to_intrinsics
 from torch_utils import misc
 from training.triplane import TriPlaneGenerator, TriPlaneFeatureGenerator
+from Autoencoder.Networks import Autoencoder
 
 
 #----------------------------------------------------------------------------
@@ -44,51 +54,32 @@ from training.triplane import TriPlaneGenerator, TriPlaneFeatureGenerator
 #----------------------------------------------------------------------------
 
 def generate_features(
-    network_pkl: str,
-    seed: int,
-    batch_size: int,
-    truncation_psi: float,
-    truncation_cutoff: int,
-    fov_deg: float
+    network_pkl: str
 ):
     ### load network
     print('Loading networks from "%s"...' % network_pkl)
     device = torch.device('cuda')
-    with dnnlib.util.open_url(network_pkl) as f:
-        G = legacy.load_network_pkl(f)['G_ema'].to(device) # type: ignore
+    model = Autoencoder(96, 8, [192, 512, 1024], [6,6,6]).to(device)
+    model.load_state_dict(torch.load(network_pkl))
 
-    G_new = TriPlaneFeatureGenerator(*G.init_args, **G.init_kwargs).eval().requires_grad_(False).to(device)
-    misc.copy_params_and_buffers(G, G_new, require_all=True)
-    G_new.neural_rendering_resolution = G.neural_rendering_resolution
-    G_new.rendering_kwargs = G.rendering_kwargs
-    G = G_new
+    features = torch.load("features-128.pth").to(device)
+    features = features.view(len(features), 96, features.shape[-2], features.shape[-1])
 
-    intrinsics = FOV_to_intrinsics(fov_deg, device=device)
-
-    # Generate features.
-    np.random.RandomState(seed)
-    zs = torch.from_numpy(np.random.randn(batch_size, G.z_dim)).to(device)
-
-    cam_pivot = torch.tensor(G.rendering_kwargs.get('avg_camera_pivot', [0, 0, 0]), device=device)
-    cam_radius = G.rendering_kwargs.get('avg_camera_radius', 2.7)
-    conditioning_cam2world_pose = LookAtPoseSampler.sample(np.pi/2, np.pi/2, cam_pivot, radius=cam_radius, device=device)
-    conditioning_params = torch.cat([conditioning_cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
-
-    features = []
-    for i in range(batch_size):
-        ws = G.mapping(zs[i:i+1], conditioning_params, truncation_psi=truncation_psi, truncation_cutoff=truncation_cutoff)
-        features.append(G.gen_planes(ws))
-    features = torch.cat(features, 0)
-    return features
-
-
+    bottlenecks = []
+    with torch.no_grad():
+        for i in range(int(128/4)):
+            bottleneck = model.EncoderLayer(features[i*4:(i+1)*4])
+            bottlenecks.append(bottleneck)
+    
+    return torch.cat(bottlenecks, 0)
 
 #----------------------------------------------------------------------------
 
 if __name__ == "__main__":
     with torch.no_grad():
-        features = generate_features("afhqcats512-128.pkl", 0, 128, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
-        torch.save(features, "features-128.pth")
+        features = generate_features("logs/convnext20c6b/model_state/120000_iter.pth") # pylint: disable=no-value-for-parameter
+        print(features.shape)
+        torch.save(features, "bottlenecks-128.pth")
 
 
 #----------------------------------------------------------------------------

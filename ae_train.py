@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 ###################################################################
-###   @FilePath: /Nerfusion-EG3D/ae_train.py
+###   @FilePath: /AE_test/home/zliu177/Desktop/Nerfusion-EG3D/ae_train.py
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-12-02 16:40:11
+###   @LastEditTime: 2022-12-05 16:57:35
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 
@@ -36,6 +36,8 @@ class Trainer(object):
             batch_size=config.batch_size, shuffle=True,
             num_workers=config.workers, pin_memory=True)
 
+        self.test_samples = torch.load("features-16-test.pth")
+
         self.version_dir = f'{config.save_dir}/{config.version}'
         self.model_state_dir = f'{self.version_dir}/model_state'
         self.image_dir = f'{self.version_dir}/image'
@@ -49,14 +51,18 @@ class Trainer(object):
             self.model = Autoencoder(96, 384, [192, 256, 384])
         elif config.model=="convnext8x":
             self.model = Autoencoder(96, 384, [192, 256, 384, 384], [2, 2, 2, 2])
+        elif config.model=="convnext8x12c":
+            self.model = Autoencoder(96, 32, [512, 1024, 2048, 2048], [2, 2, 2, 2])
         elif config.model=="convnext4c":
             self.model = Autoencoder(96, 96, [192, 384, 512])
         elif config.model=="convnext8c4b":
             self.model = Autoencoder(96, 64, [192, 512, 1024], [4,4,4])
         elif config.model=="convnext12c4b":
             self.model = Autoencoder(96, 32, [192, 512, 1024], [4,4,4])
-        elif config.model=="convnext12c8b":
-            self.model = Autoencoder(96, 32, [192, 512, 1024], [8,8,8])
+        elif config.model=="convnext16c6b":
+            self.model = Autoencoder(96, 16, [192, 512, 1024], [6,6,6])
+        elif config.model=="convnext20c6b":
+            self.model = Autoencoder(96, 8, [192, 512, 1024], [6,6,6])
         else:
             self.model = AE_triplane()
 
@@ -144,7 +150,12 @@ class Trainer(object):
                     torch.save(self.model.state_dict(), f'{self.model_state_dir}/{i}_iter.pth')
                     print(f"[iter]-[{i}]-[psnr]-[{round(psnr,2)}]-[mse]-[{round(mse,2)}]-[checkpoint]")
                     with torch.no_grad():
+                        self.model.eval()
+                        content = self.test_samples.cuda()
+                        content = content.view(len(content), 96, content.shape[-2], content.shape[-1])
+                        recon = self.model(content)
                         out = self.generate_demo(content, recon)
+                        self.model.train()
                         PIL.Image.fromarray(out[0].cpu().numpy(), 'RGB').save(f'{self.image_dir}/{i}_iter.png')
                 else:
                     print(f"[iter]-[{i}]-[psnr]-[{round(psnr,2)}]-[mse]-[{round(mse,2)}]")
