@@ -4,7 +4,7 @@
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-12-07 13:59:05
+###   @LastEditTime: 2022-12-07 16:23:50
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # -*- coding:utf-8 -*-
@@ -62,13 +62,13 @@ def generate_features(
     model = Autoencoder(96, 8, [192, 512, 1024], [6,6,6]).to(device)
     model.load_state_dict(torch.load(network_pkl))
 
-    features = torch.load("features-128.pth").to(device)
+    features = torch.load("features-1024.pth")
     features = features.view(len(features), 96, features.shape[-2], features.shape[-1])
 
     bottlenecks = []
     with torch.no_grad():
-        for i in range(int(128/4)):
-            bottleneck = model.EncoderLayer(features[i*4:(i+1)*4])
+        for i in range(int(1024/4)):
+            bottleneck = model.EncoderLayer(features[i*4:(i+1)*4].to(device))
             bottlenecks.append(bottleneck)
     
     return torch.cat(bottlenecks, 0)
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     with torch.no_grad():
         features = generate_features("logs/convnext20c6b/model_state/120000_iter.pth") # pylint: disable=no-value-for-parameter
         print(features.shape)
-        torch.save(features, "bottlenecks-128.pth")
+        torch.save(features, "bottlenecks-1024.pth")
 
 
 #----------------------------------------------------------------------------

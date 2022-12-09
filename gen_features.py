@@ -4,7 +4,7 @@
 ###   @Author: AceSix
 ###   @Date: 2022-11-13 12:36:11
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-12-07 14:01:40
+###   @LastEditTime: 2022-12-07 16:33:55
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -77,7 +77,7 @@ def generate_features(
     features = []
     for i in range(batch_size):
         ws = G.mapping(zs[i:i+1], conditioning_params, truncation_psi=truncation_psi, truncation_cutoff=truncation_cutoff)
-        features.append(G.gen_planes(ws))
+        features.append(G.gen_planes(ws).cpu())
     features = torch.cat(features, 0)
     return features
 
@@ -87,8 +87,13 @@ def generate_features(
 
 if __name__ == "__main__":
     with torch.no_grad():
-        features = generate_features("afhqcats512-128.pkl", 0, 128, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
-        torch.save(features, "features-128.pth")
+        # features = generate_features("afhqcats512-128.pkl", 0, 1024, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
+        # torch.save(features, "features-1024.pth")
+
+        features = generate_features("shapenetcars128-64.pkl", 110, 16, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
+        print(features.shape)
+        torch.save(features, "car_features-16.pth")
+
 
 
 #----------------------------------------------------------------------------

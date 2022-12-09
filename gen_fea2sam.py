@@ -178,5 +178,6 @@ def generate_images(
 
 if __name__ == "__main__":
     generate_images("afhqcats512-128.pkl", "./features.pth", "./", 18.837) # pylint: disable=no-value-for-parameter
+    generate_images("afhqcats512-128.pkl", "./features.pth", "./", 18.837) # pylint: disable=no-value-for-parameter
 
 #----------------------------------------------------------------------------

@@ -136,7 +136,7 @@ def generate_images(
     python gen_samples.py --outdir=output --trunc=0.7 --seeds=0-5 --shapes=True\\
         --network=ffhq-rebalanced-128.pkl
     """
-    # python gen_samples.py --outdir=../test_out --trunc=0.7 --seeds=0-2 --shapes=True --network=afhqcats512-128.pkl
+    # python gen_samples.py --outdir=../test_out --trunc=0.7 --seeds=0-2 --shapes=False --network=afhqcats512-128.pkl
 
     print('Loading networks from "%s"...' % network_pkl)
     device = torch.device('cuda')

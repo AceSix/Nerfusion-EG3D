@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 ###################################################################
-###   @FilePath: /AE_test/home/zliu177/Desktop/Nerfusion-EG3D/ae_train.py
+###   @FilePath: /Nerfusion-EG3D/ae_train.py
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-12-05 16:57:35
+###   @LastEditTime: 2022-12-09 14:54:40
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 
@@ -36,7 +36,7 @@ class Trainer(object):
             batch_size=config.batch_size, shuffle=True,
             num_workers=config.workers, pin_memory=True)
 
-        self.test_samples = torch.load("features-16-test.pth")
+        self.test_samples = torch.load(config.test_data_dir)
 
         self.version_dir = f'{config.save_dir}/{config.version}'
         self.model_state_dir = f'{self.version_dir}/model_state'
@@ -63,6 +63,8 @@ class Trainer(object):
             self.model = Autoencoder(96, 16, [192, 512, 1024], [6,6,6])
         elif config.model=="convnext20c6b":
             self.model = Autoencoder(96, 8, [192, 512, 1024], [6,6,6])
+        elif config.model=="convnext20c2b":
+            self.model = Autoencoder(96, 8, [512, 1024, 2048], [2,2,2])
         else:
             self.model = AE_triplane()
 
@@ -151,12 +153,14 @@ class Trainer(object):
                     print(f"[iter]-[{i}]-[psnr]-[{round(psnr,2)}]-[mse]-[{round(mse,2)}]-[checkpoint]")
                     with torch.no_grad():
                         self.model.eval()
+                        out = self.generate_demo(content, recon)
+                        PIL.Image.fromarray(out[0].cpu().numpy(), 'RGB').save(f'{self.image_dir}/{i}_iter_train.png')
                         content = self.test_samples.cuda()
                         content = content.view(len(content), 96, content.shape[-2], content.shape[-1])
                         recon = self.model(content)
                         out = self.generate_demo(content, recon)
+                        PIL.Image.fromarray(out[0].cpu().numpy(), 'RGB').save(f'{self.image_dir}/{i}_iter_test.png')
                         self.model.train()
-                        PIL.Image.fromarray(out[0].cpu().numpy(), 'RGB').save(f'{self.image_dir}/{i}_iter.png')
                 else:
                     print(f"[iter]-[{i}]-[psnr]-[{round(psnr,2)}]-[mse]-[{round(mse,2)}]")
 
@@ -165,14 +169,15 @@ class Trainer(object):
 def getParameters():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--train_data_dir', type=str, default="./features-128.pth")
-    parser.add_argument('--eg3d_dir', type=str, default="./afhqcats512-128.pkl")
+    parser.add_argument('--train_data_dir', type=str, default="./car_features-128.pth")
+    parser.add_argument('--test_data_dir', type=str, default="./car_features-16.pth")
+    parser.add_argument('--eg3d_dir', type=str, default="./shapenetcars128-64.pkl")
     parser.add_argument('--version', type=str, default="simple AE")
     parser.add_argument('--model', type=str, default="simple")
     parser.add_argument('--parallel', type=int, default=0)
 
     # AE training setting
-    parser.add_argument('--iter_size', type=int, default=200000)
+    parser.add_argument('--iter_size', type=int, default=120000)
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--workers', type=int, default=1)
     parser.add_argument('--log_interval', type=int, default=500)
