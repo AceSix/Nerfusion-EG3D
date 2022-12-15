@@ -1,0 +1,20 @@
+###
+ # @FilePath: /diffusion-EG3D/script_train_diff
+ # @Author: AceSix
+ # @Date: 1969-12-31 19:00:00
+ # @LastEditors: AceSix
+ # @LastEditTime: 2022-12-07 16:51:09
+ # Copyright (C) 2022 Brown U. All rights reserved.
+### 
+#!/bin/sh
+#
+#$ -cwd
+#
+#$ -l long 
+#
+#$ -l vf=8G
+#$ -l gmem=48G
+#$ -l gpus=1
+#
+nvidia-smi
+/home/zliu177/anaconda3/envs/diffusion/bin/python train_diffusion.py --batch_size 256 --iter_size 200000

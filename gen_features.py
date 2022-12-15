@@ -4,7 +4,7 @@
 ###   @Author: AceSix
 ###   @Date: 2022-11-13 12:36:11
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-12-07 16:33:55
+###   @LastEditTime: 2022-12-11 13:47:56
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -90,9 +90,9 @@ if __name__ == "__main__":
         # features = generate_features("afhqcats512-128.pkl", 0, 1024, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
         # torch.save(features, "features-1024.pth")
 
-        features = generate_features("shapenetcars128-64.pkl", 110, 16, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
+        features = generate_features("shapenetcars128-64.pkl", 0, 1024, 1, 14, 18.837) # pylint: disable=no-value-for-parameter
         print(features.shape)
-        torch.save(features, "car_features-16.pth")
+        torch.save(features, "car_features-1024.pth")
 
 
 

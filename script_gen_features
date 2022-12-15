@@ -3,7 +3,7 @@
  # @Author: AceSix
  # @Date: 1969-12-31 19:00:00
  # @LastEditors: AceSix
- # @LastEditTime: 2022-12-09 14:48:13
+ # @LastEditTime: 2022-12-11 13:48:56
  # Copyright (C) 2022 Brown U. All rights reserved.
 ### 
 #!/bin/sh
@@ -12,10 +12,10 @@
 #
 #$ -l hour 
 #
-#$ -l vf=8G
+#$ -l vf=16G
 #
 #$ -l gpus=1
 #
 nvidia-smi
-# python3 gen_features.py 
-/home/zliu177/anaconda3/envs/diffusion/bin/python gen_samples.py --outdir=./logs/test_out --trunc=0.7 --seeds=0-2 --shapes=False --network=shapenetcars128-64.pkl
+python3 gen_features.py 
+# /home/zliu177/anaconda3/envs/diffusion/bin/python gen_samples.py --outdir=./logs/test_out --trunc=0.7 --seeds=0-2 --shapes=False --network=shapenetcars128-64.pkl

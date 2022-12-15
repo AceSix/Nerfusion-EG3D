@@ -4,7 +4,7 @@
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-12-07 16:23:50
+###   @LastEditTime: 2022-12-11 13:59:09
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # -*- coding:utf-8 -*-
@@ -59,10 +59,11 @@ def generate_features(
     ### load network
     print('Loading networks from "%s"...' % network_pkl)
     device = torch.device('cuda')
-    model = Autoencoder(96, 8, [192, 512, 1024], [6,6,6]).to(device)
+    # model = Autoencoder(96, 8, [192, 512, 1024], [6,6,6]).to(device)
+    model = Autoencoder(96, 8, [512, 1024, 2048], [2,2,2]).to(device)
     model.load_state_dict(torch.load(network_pkl))
 
-    features = torch.load("features-1024.pth")
+    features = torch.load("car_features-1024.pth")
     features = features.view(len(features), 96, features.shape[-2], features.shape[-1])
 
     bottlenecks = []
@@ -77,9 +78,9 @@ def generate_features(
 
 if __name__ == "__main__":
     with torch.no_grad():
-        features = generate_features("logs/convnext20c6b/model_state/120000_iter.pth") # pylint: disable=no-value-for-parameter
+        features = generate_features("logs/convnext20c2b_lr1e-4/model_state/120000_iter.pth") # pylint: disable=no-value-for-parameter
         print(features.shape)
-        torch.save(features, "bottlenecks-1024.pth")
+        torch.save(features, "car_bottlenecks-1024.pth")
 
 
 #----------------------------------------------------------------------------

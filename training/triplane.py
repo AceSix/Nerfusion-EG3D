@@ -47,7 +47,7 @@ class TriPlaneFeatureGenerator(torch.nn.Module):
     
     def mapping(self, z, c, truncation_psi=1, truncation_cutoff=None, update_emas=False):
         if self.rendering_kwargs['c_gen_conditioning_zero']:
-                c = torch.zeros_like(c)
+            c = torch.zeros_like(c)
         return self.backbone.mapping(z, c * self.rendering_kwargs.get('c_scale', 0), truncation_psi=truncation_psi, truncation_cutoff=truncation_cutoff, update_emas=update_emas)
 
     def gen_planes(self, ws, update_emas=False, **synthesis_kwargs):
@@ -88,8 +88,9 @@ class TriPlaneFeatureGenerator(torch.nn.Module):
 
         if ws==None:
             return {'image_raw': rgb_image, 'image_depth': depth_image}
-        sr_image = self.superresolution(rgb_image, feature_image, ws, noise_mode=self.rendering_kwargs['superresolution_noise_mode'], **{k:synthesis_kwargs[k] for k in synthesis_kwargs.keys() if k != 'noise_mode'})
-        return {'sr': sr_image, 'image_raw': rgb_image, 'image_depth': depth_image}
+        sr_image = self.superresolution(rgb_image, feature_image, ws, noise_mode="const", **{k:synthesis_kwargs[k] for k in synthesis_kwargs.keys() if k != 'noise_mode'})
+        # sr_image = self.superresolution(rgb_image, feature_image, ws, noise_mode=self.rendering_kwargs['superresolution_noise_mode'], **{k:synthesis_kwargs[k] for k in synthesis_kwargs.keys() if k != 'noise_mode'})
+        return {'image': sr_image, 'image_raw': rgb_image, 'image_depth': depth_image}
     
     def sample(self, coordinates, directions, z, c, truncation_psi=1, truncation_cutoff=None, update_emas=False, **synthesis_kwargs):
         # Compute RGB features, density for arbitrary 3D coordinates. Mostly used for extracting shapes. 

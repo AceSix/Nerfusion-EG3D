@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 ###################################################################
-###   @FilePath: /Nerfusion-EG3D/train_diffusion.py
+###   @FilePath: /Nerfusion-EG3D/gen_diffusion_steps.py
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-12-15 15:51:15
+###   @LastEditTime: 2022-12-15 17:54:42
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 import torch
@@ -40,6 +40,9 @@ def cycle(dl):
 def has_int_squareroot(num):
     return (math.sqrt(num) ** 2) == num
 
+def unnormalize_to_zero_to_one(t):
+    return (t + 1) * 0.5
+
 def num_to_groups(num, divisor):
     groups = num // divisor
     remainder = num % divisor
@@ -47,6 +50,7 @@ def num_to_groups(num, divisor):
     if remainder > 0:
         arr.append(remainder)
     return arr
+
 
 class DiffTrainer(Trainer):
     def __init__(
@@ -116,7 +120,11 @@ class DiffTrainer(Trainer):
 
     def load_test_model(self):
         print('Loading networks from "%s"...' % self.config.AE_dir)
-        AE = Autoencoder(96, 8, [192, 512, 1024], [6,6,6])
+
+        if config.model=="convnext20c6b":
+            AE = Autoencoder(96, 8, [192, 512, 1024], [6,6,6])
+        elif config.model=="convnext20c2b":
+            AE = Autoencoder(96, 8, [512, 1024, 2048], [2,2,2])
         AE.load_state_dict(torch.load(self.config.AE_dir))
         self.decoder = AE.DecoderLayer.cuda()
         self.decoder.eval()
@@ -133,31 +141,78 @@ class DiffTrainer(Trainer):
         G_new.rendering_kwargs = G.rendering_kwargs
         self.G = G_new
 
+        angle_y = 0.4
+        angle_p = -0.2
+
+        cam2world_pose = LookAtPoseSampler.sample(3.14/2, 3.14/2, torch.tensor([0, 0, 0.5], device=device), radius=2.7, device=device)
+        intrinsics = FOV_to_intrinsics(35.837, device=device)
+        # intrinsics = FOV_to_intrinsics(18.837, device=device)
+
+        cam_pivot = torch.tensor(self.G.rendering_kwargs.get('avg_camera_pivot', [0, 0, 0]), device=device)
+        cam_radius = self.G.rendering_kwargs.get('avg_camera_radius', 2.7)
+        cam2world_pose = LookAtPoseSampler.sample(np.pi/2 + angle_y, np.pi/2 + angle_p, cam_pivot, radius=cam_radius, device=device)
+        conditioning_cam2world_pose = LookAtPoseSampler.sample(np.pi/2, np.pi/2, cam_pivot, radius=cam_radius, device=device)
+        self.camera_params = torch.cat([cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
+        conditioning_params = torch.cat([conditioning_cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
+        
+        zs = torch.from_numpy(np.stack([np.random.RandomState(seed).randn(self.G.z_dim) for seed in [1]])).to(device)
+        self.ws = self.G.mapping(z=zs, c=conditioning_params, truncation_psi=1, truncation_cutoff=14)
+
     def generate_demo(self, content):
         content = content.view(len(content), 3, 32, content.shape[-2], content.shape[-1])
-        device = torch.device('cuda')
-        cam2world_pose = LookAtPoseSampler.sample(3.14/2, 3.14/2, torch.tensor([0, 0, 0.2], device=device), radius=2.7, device=device)
-        intrinsics = FOV_to_intrinsics(18.837, device=device)
-
         num_image = content.shape[0]
-        angle_p = -0.2
 
         cols = int(math.sqrt(self.num_samples))
         imgs = [[] for c in range(cols)]
         for i in range(num_image):
-            for angle_y, angle_p in [(.4, angle_p)]:
-                cam_pivot = torch.tensor(self.G.rendering_kwargs.get('avg_camera_pivot', [0, 0, 0]), device=device)
-                cam_radius = self.G.rendering_kwargs.get('avg_camera_radius', 2.7)
-                cam2world_pose = LookAtPoseSampler.sample(np.pi/2 + angle_y, np.pi/2 + angle_p, cam_pivot, radius=cam_radius, device=device)
-                conditioning_cam2world_pose = LookAtPoseSampler.sample(np.pi/2, np.pi/2, cam_pivot, radius=cam_radius, device=device)
-                camera_params = torch.cat([cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
-                conditioning_params = torch.cat([conditioning_cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
-    
-                img = self.G.synthesis(content[i:i+1], camera_params)['image_raw']
-                img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
-                imgs[i%cols].append(img)
+            sr, raw = self.triplane_decode(content[i:i+1])
+            imgs[i%cols].append(raw)
         img_cols = [torch.cat(c, dim=1) for c in imgs]
         return torch.cat(img_cols, dim=2)
+
+    def triplane_decode(self, triplane):
+        device = torch.device('cuda')
+
+        decode_out = self.G.synthesis(triplane, self.camera_params, ws=self.ws)
+        img = decode_out['image']
+        img2 = decode_out['image_raw']
+        img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+        img2 = (img2.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+        return img, img2
+
+    def gen_step_samples(self):
+        batch, device = 1, torch.device('cuda')
+
+        shape = (batch, self.model.channels, self.image_size, self.image_size)
+
+        img = torch.randn(shape, device=device)
+
+        x_start = None
+        self_condition = self.model.self_condition
+
+        for t in tqdm(reversed(range(0, self.model.num_timesteps)), desc = 'sampling loop time step', total = self.model.num_timesteps):
+            self_cond = x_start if self_condition else None
+            img, x_start = self.ema.ema_model.p_sample(img, t, self_cond)
+
+            sr, raw = self.diff2img(img)
+            PIL.Image.fromarray(sr[0].cpu().numpy(), 'RGB').save(f'{self.config.out_dir}/sample-sr-{t}.png')
+            PIL.Image.fromarray(raw[0].cpu().numpy(), 'RGB').save(f'{self.config.out_dir}/sample-raw-{t}.png')
+
+        triplane = self.diff2triplane(img)
+        print(triplane.shape)
+        torch.save(triplane, f'{self.config.out_dir}/final_triplane.pth')
+
+    def diff2triplane(self, img):
+        content = self.decoder(self.ds.denormalize(unnormalize_to_zero_to_one(img)))
+        return content
+
+    def diff2img(self, img):
+        content = self.decoder(self.ds.denormalize(unnormalize_to_zero_to_one(img)))
+        # print(content.shape)
+        sr, raw = self.triplane_decode(content)
+        # print(out.shape)
+        return sr, raw
+        # return img
     
     def train(self):
         accelerator = self.accelerator
@@ -224,7 +279,7 @@ def getParameters():
     parser.add_argument('--eg3d_dir', type=str, default="/home/zliu177/Desktop/Nerfusion-EG3D/afhqcats512-128.pkl")
     parser.add_argument('--AE_dir', type=str, default="/home/zliu177/Desktop/Nerfusion-EG3D/logs/convnext20c6b/model_state/120000_iter.pth")
     parser.add_argument('--version', type=str, default="Diffusion-c8")
-    parser.add_argument('--model', type=str, default="simple")
+    parser.add_argument('--model', type=str, default="convnext20c6b")
     parser.add_argument('--parallel', type=int, default=0)
 
     # AE training setting
@@ -235,7 +290,9 @@ def getParameters():
     parser.add_argument('--learning_rate', type=float, default=8e-5)
 
     # Path 
-    parser.add_argument('--save_dir', type=str, default='./results')
+    parser.add_argument('--save_dir', type=str, default='/home/zliu177/Desktop/diffusion-EG3D/results')
+    parser.add_argument('--out_dir', type=str, default='./cat_steps')
+    parser.add_argument('--checkpoint', type=int, default=100)
 
 
     return parser.parse_args()
@@ -261,6 +318,9 @@ if __name__ == "__main__":
         sampling_timesteps = 250,   # number of sampling timesteps (using ddim for faster inference [see citation for ddim paper])
         loss_type = 'l2'          # L1 or L2
     ).cuda()
+    
 
     trainer = DiffTrainer(diffusion, config, results_folder=version_folder, train_num_steps=config.iter_size)
-    trainer.train()
+    trainer.load(config.checkpoint)
+    os.makedirs(config.out_dir, exist_ok=True)
+    trainer.gen_step_samples()
