@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 ###################################################################
-###   @FilePath: /Nerfusion-EG3D/gen_video_diff.py
+###   @FilePath: /Nerfusion-EG3D/gen_video_merge.py
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-12-15 19:57:47
+###   @LastEditTime: 2022-12-16 14:36:46
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 # SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -279,7 +279,22 @@ def generate_images(
     G_new.rendering_kwargs = G.rendering_kwargs
     G = G_new
 
-    triplane = torch.load(os.path.join(outdir, "final_triplane.pth"))
+    # triplane1 = torch.load("./logs/car2_steps/final_triplane.pth")
+    # triplane1 = triplane1.view(len(triplane1), 3, 32, triplane1.shape[-2], triplane1.shape[-1])
+    # triplane2 = torch.load("./logs/car5_steps/final_triplane.pth")
+    # triplane2 = triplane2.view(len(triplane2), 3, 32, triplane2.shape[-2], triplane2.shape[-1])
+    # triplane3 = torch.load("./logs/car6_steps/final_triplane.pth")
+    # triplane3 = triplane3.view(len(triplane3), 3, 32, triplane3.shape[-2], triplane3.shape[-1])
+
+    triplane1 = torch.load("./logs/cat_steps/final_triplane.pth")
+    triplane1 = triplane1.view(len(triplane1), 3, 32, triplane1.shape[-2], triplane1.shape[-1])
+    triplane2 = torch.load("./logs/cat2_steps/final_triplane.pth")
+    triplane2 = triplane2.view(len(triplane2), 3, 32, triplane2.shape[-2], triplane2.shape[-1])
+    triplane3 = torch.load("./logs/cat3_steps/final_triplane.pth")
+    triplane3 = triplane3.view(len(triplane3), 3, 32, triplane3.shape[-2], triplane3.shape[-1])
+
+    triplane_p = torch.cat([triplane1[:, 0:1], triplane2[:, 1:2], triplane3[:, 2:3]], 1)
+    triplane_c = torch.cat([triplane1[:, :, :16], triplane2[:, :, 16:24], triplane3[:, :, 24:]], 2)
 
     G.rendering_kwargs['depth_resolution'] = int(G.rendering_kwargs['depth_resolution'] * sampling_multiplier)
     G.rendering_kwargs['depth_resolution_importance'] = int(G.rendering_kwargs['depth_resolution_importance'] * sampling_multiplier)
@@ -290,8 +305,11 @@ def generate_images(
     if truncation_psi == 1.0:
         truncation_cutoff = 14 # no truncation so doesn't matter where we cutoff
 
-    output = os.path.join(outdir, f'out-test.mp4')
-    gen_interp_video(G=G, triplanes=triplane, mp4=output, bitrate='10M', grid_dims=grid, num_keyframes=num_keyframes, w_frames=w_frames, seeds=[0], shuffle_seed=shuffle_seed, psi=truncation_psi, truncation_cutoff=truncation_cutoff, cfg=cfg, image_mode=image_mode)
+    output = os.path.join(outdir, f'out-cat123-plane.mp4')
+    gen_interp_video(G=G, triplanes=triplane_p, mp4=output, bitrate='10M', grid_dims=grid, num_keyframes=num_keyframes, w_frames=w_frames, seeds=[0], shuffle_seed=shuffle_seed, psi=truncation_psi, truncation_cutoff=truncation_cutoff, cfg=cfg, image_mode=image_mode)
+
+    output = os.path.join(outdir, f'out-cat123-channel.mp4')
+    gen_interp_video(G=G, triplanes=triplane_c, mp4=output, bitrate='10M', grid_dims=grid, num_keyframes=num_keyframes, w_frames=w_frames, seeds=[0], shuffle_seed=shuffle_seed, psi=truncation_psi, truncation_cutoff=truncation_cutoff, cfg=cfg, image_mode=image_mode)
 
 #----------------------------------------------------------------------------
 

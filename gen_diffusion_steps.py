@@ -4,7 +4,7 @@
 ###   @Author: AceSix
 ###   @Date: 1969-12-31 19:00:00
 ###   @LastEditors: AceSix
-###   @LastEditTime: 2022-12-15 17:54:42
+###   @LastEditTime: 2022-12-16 12:58:35
 ###   @Copyright (C) 2022 Brown U. All rights reserved.
 ###################################################################
 import torch
@@ -141,16 +141,21 @@ class DiffTrainer(Trainer):
         G_new.rendering_kwargs = G.rendering_kwargs
         self.G = G_new
 
-        angle_y = 0.4
-        angle_p = -0.2
+        # angle_y = 0.4
+        # angle_p = -0.2
 
-        cam2world_pose = LookAtPoseSampler.sample(3.14/2, 3.14/2, torch.tensor([0, 0, 0.5], device=device), radius=2.7, device=device)
-        intrinsics = FOV_to_intrinsics(35.837, device=device)
-        # intrinsics = FOV_to_intrinsics(18.837, device=device)
+        angle_y = 0.3
+        angle_p = -0.1
+        # intrinsics = FOV_to_intrinsics(35.837, device=device)
+        intrinsics = FOV_to_intrinsics(18.837, device=device)
 
         cam_pivot = torch.tensor(self.G.rendering_kwargs.get('avg_camera_pivot', [0, 0, 0]), device=device)
         cam_radius = self.G.rendering_kwargs.get('avg_camera_radius', 2.7)
         cam2world_pose = LookAtPoseSampler.sample(np.pi/2 + angle_y, np.pi/2 + angle_p, cam_pivot, radius=cam_radius, device=device)
+        if 'shape' in self.config.eg3d_dir:
+            focal_length = 1.7074
+            intrinsics = torch.tensor([[focal_length, 0, 0.5], [0, focal_length, 0.5], [0, 0, 1]], device=device)
+            cam2world_pose = LookAtPoseSampler.sample(3.14/2 * 0.3, 3.14/2 - 0.05, torch.tensor([0, 0, 0], device=device), radius=1.7, device=device)
         conditioning_cam2world_pose = LookAtPoseSampler.sample(np.pi/2, np.pi/2, cam_pivot, radius=cam_radius, device=device)
         self.camera_params = torch.cat([cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
         conditioning_params = torch.cat([conditioning_cam2world_pose.reshape(-1, 16), intrinsics.reshape(-1, 9)], 1)
@@ -180,7 +185,7 @@ class DiffTrainer(Trainer):
         img2 = (img2.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
         return img, img2
 
-    def gen_step_samples(self):
+    def gen_step_samples(self, name=None):
         batch, device = 1, torch.device('cuda')
 
         shape = (batch, self.model.channels, self.image_size, self.image_size)
@@ -195,12 +200,32 @@ class DiffTrainer(Trainer):
             img, x_start = self.ema.ema_model.p_sample(img, t, self_cond)
 
             sr, raw = self.diff2img(img)
+        if name is not None:
+            PIL.Image.fromarray(sr[0].cpu().numpy(), 'RGB').save(f'{self.config.out_dir}/{name}-sr-{t}.png')
+            PIL.Image.fromarray(raw[0].cpu().numpy(), 'RGB').save(f'{self.config.out_dir}/{name}-raw-{t}.png')
+        else:
             PIL.Image.fromarray(sr[0].cpu().numpy(), 'RGB').save(f'{self.config.out_dir}/sample-sr-{t}.png')
             PIL.Image.fromarray(raw[0].cpu().numpy(), 'RGB').save(f'{self.config.out_dir}/sample-raw-{t}.png')
+            triplane = self.diff2triplane(img)
+            print(triplane.shape)
+            torch.save(triplane, f'{self.config.out_dir}/final_triplane.pth')
 
-        triplane = self.diff2triplane(img)
-        print(triplane.shape)
-        torch.save(triplane, f'{self.config.out_dir}/final_triplane.pth')
+
+    def batch_gen(self, num_samples):
+        batch_size, device = 8, torch.device('cuda')
+
+        image_id = 0
+        batches = num_to_groups(num_samples, batch_size)
+        for b in batches:
+            images = self.ema.ema_model.sample(batch_size=b)
+            content = self.decoder(self.ds.denormalize(images))
+
+            for c in range(len(content)):
+                sr, raw = self.triplane_decode(content[c:c+1])
+                PIL.Image.fromarray(sr[0].cpu().numpy(), 'RGB').save(f'{self.config.out_dir}/sample-sr-{image_id}.png')
+                PIL.Image.fromarray(raw[0].cpu().numpy(), 'RGB').save(f'{self.config.out_dir}/sample-raw-{image_id}.png')
+                image_id += 1
+
 
     def diff2triplane(self, img):
         content = self.decoder(self.ds.denormalize(unnormalize_to_zero_to_one(img)))
@@ -323,4 +348,7 @@ if __name__ == "__main__":
     trainer = DiffTrainer(diffusion, config, results_folder=version_folder, train_num_steps=config.iter_size)
     trainer.load(config.checkpoint)
     os.makedirs(config.out_dir, exist_ok=True)
-    trainer.gen_step_samples()
+
+    # trainer.gen_step_samples()
+    trainer.batch_gen(512)
+    

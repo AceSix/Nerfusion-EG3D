@@ -69,7 +69,41 @@ class LookAtPoseSampler:
     def sample(horizontal_mean, vertical_mean, lookat_position, horizontal_stddev=0, vertical_stddev=0, radius=1, batch_size=1, device='cpu'):
         h = torch.randn((batch_size, 1), device=device) * horizontal_stddev + horizontal_mean
         v = torch.randn((batch_size, 1), device=device) * vertical_stddev + vertical_mean
-        v = torch.clamp(v, 1e-5, math.pi - 1e-5)
+        v = torch.clamp(v, -math.pi + 1e-5, math.pi - 1e-5)
+        # print(radius)
+        # print(lookat_position)
+
+        theta = h
+        v = v / math.pi
+        phi = torch.arccos(1 - 2*v)
+
+        camera_origins = torch.zeros((batch_size, 3), device=device)
+
+        camera_origins[:, 0:1] = radius*torch.sin(phi) * torch.cos(math.pi-theta)
+        camera_origins[:, 2:3] = radius*torch.sin(phi) * torch.sin(math.pi-theta)
+        camera_origins[:, 1:2] = radius*torch.cos(phi)
+
+        # forward_vectors = math_utils.normalize_vecs(-camera_origins)
+        forward_vectors = math_utils.normalize_vecs(lookat_position - camera_origins)
+        return create_cam2world_matrix(forward_vectors, camera_origins)
+
+
+class LookAtPoseSamplerRef:
+    """
+    Same as GaussianCameraPoseSampler, except the
+    camera is specified as looking at 'lookat_position', a 3-vector.
+
+    Example:
+    For a camera pose looking at the origin with the camera at position [0, 0, 1]:
+    cam2world = LookAtPoseSampler.sample(math.pi/2, math.pi/2, torch.tensor([0, 0, 0]), radius=1)
+    """
+
+    @staticmethod
+    def sample(horizontal_mean, vertical_mean, lookat_position, radius=1, batch_size=1, device='cpu'):
+        h = horizontal_mean
+        v = vertical_mean
+        # v = torch.clamp(v, 1e-5, math.pi - 1e-5)
+        v = torch.Tensor([v])
 
         theta = h
         v = v / math.pi

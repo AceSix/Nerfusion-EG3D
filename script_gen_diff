@@ -3,7 +3,7 @@
  # @Author: AceSix
  # @Date: 1969-12-31 19:00:00
  # @LastEditors: AceSix
- # @LastEditTime: 2022-12-15 18:02:27
+ # @LastEditTime: 2022-12-16 14:40:03
  # Copyright (C) 2022 Brown U. All rights reserved.
 ### 
 #!/bin/sh
@@ -17,9 +17,13 @@
 #$ -l gpus=1
 #
 nvidia-smi
-# /home/zliu177/anaconda3/envs/diffusion/bin/python gen_diffusion_steps.py --out_dir ./logs/cat_steps --checkpoint 73
+# /home/zliu177/anaconda3/envs/diffusion/bin/python gen_diffusion_steps.py --out_dir ./logs/cat7_steps --checkpoint 73
 
-# /home/zliu177/anaconda3/envs/diffusion/bin/python gen_diffusion_steps.py --out_dir ./logs/car_steps --checkpoint 100 \
+# /home/zliu177/anaconda3/envs/diffusion/bin/python gen_video_diff.py --outdir=logs/cat6_steps --trunc=1  --seeds=0-1 --grid=1x1 \
+#     --network=afhqcats512-128.pkl --cfg AFHQ --image_mode image --w-frames 240
+
+
+# /home/zliu177/anaconda3/envs/diffusion/bin/python gen_diffusion_steps.py --out_dir ./logs/car_batch --checkpoint 100 \
 #     --train_data_dir ./car_bottlenecks-1024.pth \
 #     --eg3d_dir shapenetcars128-64.pkl \
 #     --AE_dir logs/convnext20c2b_lr1e-4/model_state/120000_iter.pth \
@@ -27,8 +31,12 @@ nvidia-smi
 #     --model convnext20c2b
 
 
-/home/zliu177/anaconda3/envs/diffusion/bin/python gen_video_diff.py --outdir=logs/car_steps --trunc=1  --seeds=0-1 --grid=1x1 \
-    --network=shapenetcars128-64.pkl --cfg Shapenet --image_mode image
+# /home/zliu177/anaconda3/envs/diffusion/bin/python gen_video_diff.py --outdir=logs/car8_steps --trunc=1  --seeds=0-1 --grid=1x1 \
+#     --network=shapenetcars128-64.pkl --cfg Shapenet --image_mode image
 
-# /home/zliu177/anaconda3/envs/diffusion/bin/python gen_video_diff.py --outdir=logs/cat_steps --trunc=1  --seeds=0-1 --grid=1x1 \
-#     --network=afhqcats512-128.pkl --cfg AFHQ --image_mode image
+
+# /home/zliu177/anaconda3/envs/diffusion/bin/python gen_video_merge.py --outdir=logs/car_merge --trunc=1  --seeds=0-1 --grid=1x1 \
+#     --network=shapenetcars128-64.pkl --cfg Shapenet --image_mode image --w-frames 240
+
+/home/zliu177/anaconda3/envs/diffusion/bin/python gen_video_merge.py --outdir=logs/cat_merge --trunc=1  --seeds=0-1 --grid=1x1 \
+    --network=afhqcats512-128.pkl --cfg AFHQ --image_mode image --w-frames 240
