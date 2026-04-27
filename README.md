@@ -3,7 +3,7 @@
  * @Author: AceSix
  * @Date: 2026-04-27 16:35:47
  * @LastEditors: AceSix
- * @LastEditTime: 2026-04-27 16:44:34
+ * @LastEditTime: 2026-04-27 16:45:32
  * Copyright (C) 2026 Brown U. All rights reserved.
 -->
 # NeRFusion: Latent Diffusion on Triplane Feature Grids for Novel Scene Rendering
@@ -11,7 +11,7 @@
 NeRFusion is a course project exploring **3D-aware generative modeling** by applying latent diffusion directly to **triplane feature grids**. Instead of generating 2D pixels and then reconstructing 3D structure, the model generates a compact triplane representation that can be decoded by a neural renderer into multi-view-consistent images.
 
 <p align="center">
-  <img src="static/img/pipeline.png" alt="NeRFusion pipeline" width="900">
+  <img src="./static/img/pipeline.png" alt="NeRFusion pipeline" width="900">
 </p>
 
 ## Motivation
@@ -40,13 +40,13 @@ NeRFusion was tested on AFHQv2 cats and ShapeNet cars. The generated samples sho
 ### ShapeNet Cars
 
 <p align="center">
-  <img src="static/img/car_grid.png" alt="Generated car views" width="600">
+  <img src="./static/img/car_grid.png" alt="Generated car views" width="600">
 </p>
 
 ### AFHQv2 Cats
 
 <p align="center">
-  <img src="static/img/cat_grid.png" alt="Generated cat views" width="600">
+  <img src="./static/img/cat_grid.png" alt="Generated cat views" width="600">
 </p>
 
 
